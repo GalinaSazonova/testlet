@@ -2,13 +2,14 @@
 {
     public class Testlet
     {
-        public string TestletId;
-        private List<Item> Items;
+        public string TestletId { get; }
+        private readonly List<Item> _items;
+
         public Testlet(string testletId, List<Item> items)
         {
             CheckItemsInput(items);
             TestletId = testletId;
-            Items = items;
+            _items = items;
         }
         /// <summary>
         /// Items private collection has 6 Operational and 4 Pretest Items.
@@ -20,7 +21,7 @@
             var random = new Random();
 
             var result = new List<Item>(TestletConsts.ItemCount);
-            var pretestItems = Items.Where(item => item.ItemType == ItemTypeEnum.Pretest).ToList();
+            var pretestItems = _items.Where(item => item.ItemType == ItemTypeEnum.Pretest).ToList();
 
             for (var i = 0; i < TestletConsts.PretestStartCount; i++)
             {
@@ -29,12 +30,13 @@
                 pretestItems.RemoveAt(index);
             }
 
-            var rest = Items.Where(item => item.ItemType == ItemTypeEnum.Operational).Union(pretestItems).ToList();
-            for (var j = 0; j < TestletConsts.ItemCount - TestletConsts.PretestStartCount; j++)
+            result.AddRange(_items.Where(item => item.ItemType == ItemTypeEnum.Operational).Union(pretestItems));
+            for (var j = TestletConsts.ItemCount - 1; j >= TestletConsts.PretestStartCount; j--)
             {
-                var index = random.Next(rest.Count);
-                result.Add(rest[index]);
-                rest.RemoveAt(index);
+                var index = random.Next(TestletConsts.PretestStartCount, j + 1);
+                var temp = result[index];
+                result[index] = result[j];
+                result[j] = temp;
             }
 
             return result;
@@ -42,9 +44,14 @@
 
         private void CheckItemsInput(List<Item> items)
         {
-            if (items == null || items.Count != TestletConsts.ItemCount)
+            if (items == null)
             {
-                throw new Exception("Wrong number of items");
+                throw new ArgumentNullException($"{TestletConsts.ItemCount} items expected.");
+            }
+
+            if (items.Count != TestletConsts.ItemCount)
+            {
+                throw new Exception($"Wrong number of items. {TestletConsts.ItemCount} expected, {items.Count} received");
             }
 
             if (items.Count(item => item.ItemType == ItemTypeEnum.Pretest) != TestletConsts.PretestTotalCount)
